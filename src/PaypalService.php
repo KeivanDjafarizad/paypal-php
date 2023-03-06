@@ -3,20 +3,27 @@
 namespace App;
 
 use App\Connection\Credentials;
+use App\DataTransferObjects\Responses\Authentication\AuthenticationSuccess;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 
 class PaypalService
 {
+    private string $accessToken;
     public function __construct(
         private readonly Credentials $credentials,
-        private Client $client
+        private Client $client,
     ) {
         $this->client = new Client([
             'base_uri' => 'https://api-m.sandbox.paypal.com/',
         ]);
     }
 
-    public function getToken(  )
+    /**
+     * @throws GuzzleException
+     * @throws \Exception
+     */
+    public function getToken(  ): AuthenticationSuccess
     {
         $res = $this
             ->client
@@ -36,6 +43,15 @@ class PaypalService
                     ],
                 ]
             );
-        var_dump($res);
+        $response = $this->parseResponse($res->getBody()->getContents());
+        if($res->getStatusCode() > 299) {
+            throw new \Exception('Error getting token');
+        }
+        return AuthenticationSuccess::fromArray($response);
+    }
+
+    private function parseResponse( string $body ): array
+    {
+        return json_decode($body, true);
     }
 }
